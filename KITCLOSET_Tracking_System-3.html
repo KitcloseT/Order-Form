@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>KITCLOSET — Order Tracking</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --ink: #0d0d0d;
+    --paper: #f5f2ec;
+    --orange: #e86a00;
+    --orange-dark: #c45a00;
+    --orange-soft: rgba(232,106,0,0.12);
+    --line: #c8c0b0;
+    --field-bg: #ffffff;
+    --success: #1a7a4a;
+    --muted: #666;
+    --danger: #c0392b;
+    --blue: #1a5f9e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  header {
+    background: var(--orange);
+    padding: 20px 24px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; right: -40px; top: -40px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: rgba(0,0,0,0.08);
+  }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(32px, 7vw, 46px);
+    letter-spacing: 2px; line-height: 1; color: #000;
+    position: relative; z-index: 1;
+  }
+  header p {
+    font-size: 13px; color: rgba(255,255,255,0.85);
+    margin-top: 4px; font-weight: 300;
+  }
+  .mode-switch {
+    max-width: 720px; margin: 0 auto; padding: 16px 20px 0;
+    display: flex; gap: 8px;
+  }
+  .mode-btn {
+    flex: 1; padding: 12px; border: 2px solid var(--line);
+    border-radius: 10px; background: #fff;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    color: #555; cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn.active {
+    border-color: var(--orange); background: var(--orange); color: #fff;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+  .panel { display: none; animation: fadeIn 0.25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .section { margin-top: 24px; }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px; letter-spacing: 2.5px;
+    color: var(--orange-dark); text-transform: uppercase;
+    border-bottom: 2px solid var(--orange);
+    padding-bottom: 6px; margin-bottom: 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  label {
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  input, select, textarea {
+    background: var(--field-bg);
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-soft);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn {
+    border: none; border-radius: 10px;
+    padding: 14px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+    width: 100%;
+  }
+  .btn-primary {
+    background: var(--orange); color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px;
+  }
+  .btn-primary:hover { background: var(--orange-dark); }
+  .btn-primary:disabled { background: #bbb; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent; color: var(--orange-dark);
+    border: 2px solid var(--orange); margin-top: 10px;
+  }
+  .btn-ghost {
+    background: #fff; color: var(--muted);
+    border: 1.5px solid var(--line); font-size: 13px; padding: 8px 12px;
+    width: auto;
+  }
+  .btn-ghost:hover { border-color: var(--orange); color: var(--orange-dark); }
+  .btn-danger {
+    background: transparent; color: var(--danger);
+    border: 1.5px solid var(--danger); font-size: 13px; padding: 8px 12px;
+    width: auto;
+  }
+
+  .result-card {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 20px;
+    display: none;
+  }
+  .result-card.show { display: block; }
+  .status-badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 1.5px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .status-badge.done { background: var(--success); }
+  .result-meta { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .result-note {
+    background: #fff8ed;
+    border-left: 4px solid var(--orange);
+    padding: 12px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px; line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .timeline { list-style: none; position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: '';
+    position: absolute; left: 7px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--line);
+  }
+  .timeline li {
+    position: relative; padding-bottom: 16px;
+    font-size: 14px;
+  }
+  .timeline li:last-child { padding-bottom: 0; }
+  .timeline li::before {
+    content: '';
+    position: absolute; left: -20px; top: 5px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--line); border: 2px solid #fff;
+  }
+  .timeline li.done::before { background: var(--success); }
+  .timeline li.current::before { background: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+  .timeline .t-label { font-weight: 600; }
+  .timeline .t-time { font-size: 12px; color: #999; margin-top: 2px; }
+  .order-summary {
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid #eee;
+    font-size: 13px;
+  }
+  .order-summary div { display: flex; justify-content: space-between; padding: 4px 0; gap: 12px; }
+  .order-summary span:first-child { color: #999; flex-shrink: 0; }
+  .order-summary span:last-child { text-align: right; word-break: break-word; }
+  .not-found {
+    text-align: center; padding: 28px 16px; color: #666;
+  }
+  .not-found strong { display: block; font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+
+  .admin-login {
+    max-width: 360px; margin: 40px auto 0;
+    background: #fff; border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 24px;
+  }
+  .admin-login h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 1px;
+    margin-bottom: 16px; text-align: center;
+  }
+  .search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .search-row input { flex: 1; }
+  .search-row .btn { width: auto; padding: 12px 18px; font-size: 14px; }
+  .order-list { display: flex; flex-direction: column; gap: 10px; }
+  .order-item {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .order-item:hover, .order-item.active { border-color: var(--orange); }
+  .order-item .code {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 1px;
+  }
+  .order-item .meta { font-size: 13px; color: #666; margin-top: 2px; }
+  .order-item .status-tag {
+    display: inline-block; margin-top: 6px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 3px 8px; border-radius: 4px;
+    background: var(--orange-soft); color: var(--orange-dark);
+  }
+  .editor {
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 16px;
+    display: none;
+  }
+  .editor.show { display: block; }
+  .editor h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .editor .sub { font-size: 13px; color: #666; margin-bottom: 18px; }
+  .status-options {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-bottom: 18px;
+  }
+  .status-option {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #fff;
+  }
+  .status-option:hover { border-color: #ccc; }
+  .status-option.selected {
+    border-color: var(--orange);
+    background: var(--orange-soft);
+  }
+  .status-option input { width: auto; margin-top: 3px; accent-color: var(--orange); }
+  .status-option .opt-body { flex: 1; }
+  .status-option .opt-label { font-weight: 600; font-size: 14px; }
+  .status-option .opt-desc { font-size: 12px; color: #777; margin-top: 2px; }
+  .ship-extra {
+    display: none; margin-top: 10px; padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .status-option.selected .ship-extra { display: block; }
+  .editor-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .editor-actions .btn { flex: 1; }
+  .empty-state {
+    text-align: center; padding: 40px 16px; color: #888; font-size: 14px;
+  }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff;
+    padding: 12px 22px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s; z-index: 100;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .config-banner {
+    background: #1a5f9e; color: #fff;
+    font-size: 12px; text-align: center;
+    padding: 8px 12px; line-height: 1.4;
+  }
+  .config-banner.warn { background: #8a5a00; }
+  .config-banner a { color: #fff; text-decoration: underline; }
+  .loading { text-align: center; padding: 20px; color: #888; font-size: 14px; }
+  @media (max-width: 560px) {
+    .search-row { flex-direction: column; }
+    .search-row .btn { width: 100%; }
+    .editor-actions { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="config-banner" id="config-banner">
+  Connecting to Google Sheets…
+</div>
+
+<header>
+  <h1>KITCLOSET</h1>
+  <p>Order Tracking System</p>
+</header>
+
+<div class="mode-switch">
+  <button type="button" class="mode-btn active" data-mode="client" id="btn-mode-client">Client Tracking</button>
+  <button type="button" class="mode-btn" data-mode="admin" id="btn-mode-admin">Admin Panel</button>
+</div>
+
+<div class="container">
+
+  <!-- CLIENT -->
+  <div class="panel active" id="panel-client">
+    <div class="section">
+      <div class="section-title">Track Your Order</div>
+      <div class="field">
+        <label for="track-input">Tracking Number</label>
+        <input type="text" id="track-input" placeholder="e.g. KC-261007-A3F9" autocomplete="off" style="text-transform:uppercase;"/>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-track">CHECK STATUS</button>
+    </div>
+    <div class="result-card" id="result-card">
+      <div id="result-content"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="panel" id="panel-admin">
+    <div id="admin-gate">
+      <div class="admin-login">
+        <h2>Admin Access</h2>
+        <div class="field">
+          <label for="admin-pass">Admin key</label>
+          <input type="password" id="admin-pass" placeholder="Enter admin key from Apps Script"/>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-admin-login">ENTER</button>
+        <p style="font-size:12px;color:#888;text-align:center;margin-top:12px;">
+          Same value as <code>ADMIN_KEY</code> in your Apps Script
+        </p>
+      </div>
+    </div>
+
+    <div id="admin-app" style="display:none;">
+      <div class="section">
+        <div class="section-title">Orders</div>
+        <div class="search-row">
+          <input type="text" id="admin-search" placeholder="Search tracking # or name…" style="text-transform:uppercase;"/>
+          <button type="button" class="btn btn-primary" id="btn-admin-search" style="width:auto;font-size:16px;padding:12px 18px;">Search</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost" id="btn-refresh">Refresh</button>
+          <button type="button" class="btn btn-danger" id="btn-logout">Log out</button>
+        </div>
+        <div class="order-list" id="order-list"><div class="loading">Loading orders…</div></div>
+      </div>
+
+      <div class="editor" id="editor">
+        <h3 id="ed-tracking">—</h3>
+        <div class="sub" id="ed-meta">—</div>
+        <label style="margin-bottom:8px;display:block;">Update Status</label>
+        <div class="status-options" id="status-options"></div>
+        <div class="field">
+          <label for="ed-note">Public note (shown to client)</label>
+          <textarea id="ed-note" placeholder="Optional message for the customer…"></textarea>
+        </div>
+        <div class="editor-actions">
+          <button type="button" class="btn btn-secondary" id="btn-ed-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-ed-save">SAVE UPDATE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  // ============================================================
+  // CONFIG — paste your Apps Script Web App URL and admin key
+  // ============================================================
+  const SCRIPT_URL = '';  // e.g. 'https://script.google.com/macros/s/XXXX/exec'
+  const DEFAULT_ADMIN_KEY = ''; // optional: prefill (still required to log in)
+  // ============================================================
+
+  const STATUSES = [
+    { id: 'order_placed',     label: 'Order Placed',           desc: 'Order received and confirmed' },
+    { id: 'processing',       label: 'Processing',             desc: 'Order is being prepared' },
+    { id: 'packed',           label: 'Packed',                 desc: 'Items packed and ready' },
+    { id: 'shipped',          label: 'Shipped',                desc: 'Handed to carrier — select carrier + tracking #', hasTracking: true },
+    { id: 'in_transit_usa',   label: 'In transit to USA',      desc: 'On the way to the US warehouse' },
+    { id: 'arrived_us',       label: 'Arrived at US warehouse',desc: 'Received at US facility' },
+    { id: 'left_us',          label: 'Left US warehouse',      desc: 'Departed US facility for Jamaica' },
+    { id: 'land_jamaica',     label: 'Land in Jamaica',        desc: 'Arrived in Jamaica' },
+    { id: 'customs',          label: 'Customs Clearance',      desc: 'Going through customs' },
+    { id: 'ready',            label: 'Ready for Pickup/Delivery', desc: 'Ready for customer' },
+  ];
+
+  const KNOWN_CARRIERS = ['DHL','UPS','FedEx','USPS','China Post','YunExpress','4PX'];
+
+  let adminKey = sessionStorage.getItem('kc_admin_key') || '';
+  let ordersCache = [];
+  let selectedTracking = null;
+
+  // ---------- UI helpers ----------
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2400);
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString('en-JM', { dateStyle: 'medium', timeStyle: 'short' });
+    } catch { return iso; }
+  }
+  function statusLabel(id) {
+    return (STATUSES.find(s => s.id === id) || {}).label || id;
+  }
+  function statusIndex(id) {
+    return STATUSES.findIndex(s => s.id === id);
+  }
+
+  function setBanner(ok, msg) {
+    const el = document.getElementById('config-banner');
+    el.className = 'config-banner' + (ok ? '' : ' warn');
+    el.innerHTML = msg;
+  }
+
+  // ---------- API ----------
+  async function api(action, payload, method) {
+    method = method || (action === 'track' || action === 'list' || action === 'ping' ? 'GET' : 'POST');
+    if (!SCRIPT_URL) {
+      throw new Error('SCRIPT_URL not configured');
+    }
+    if (method === 'GET') {
+      const qs = new URLSearchParams({ action, ...payload }).toString();
+      const res = await fetch(SCRIPT_URL + '?' + qs);
+      return res.json();
+    }
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...payload })
+    });
+    return res.json();
+  }
+
+  // ---------- Mode switch ----------
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + btn.dataset.mode).classList.add('active');
+    });
+  });
+
+  // ---------- CLIENT ----------
+  function renderClientResult(order, notFoundMsg) {
+    const card = document.getElementById('result-card');
+    const box = document.getElementById('result-content');
+    if (!order) {
+      box.innerHTML = `<div class="not-found"><strong>No order found</strong>${escapeHtml(notFoundMsg || 'Check the tracking number and try again.')}</div>`;
+      card.classList.add('show');
+      return;
+    }
+    const currentIdx = statusIndex(order.status);
+    const isReady = order.status === 'ready';
+    const history = order.history || [];
+    const timeline = STATUSES.map((s, i) => {
+      let cls = '';
+      if (i < currentIdx) cls = 'done';
+      else if (i === currentIdx) cls = 'current';
+      const hist = history.find(h => h.status === s.id);
+      const time = hist ? fmtDate(hist.at) : (i === currentIdx ? fmtDate(order.updatedAt) : '');
+      return `<li class="${cls}"><div class="t-label">${s.label}</div>${time ? `<div class="t-time">${time}</div>` : ''}</li>`;
+    }).join('');
+
+    let shipLine = '';
+    if (order.carrier || order.carrierTracking) {
+      const carrierName = order.carrier ? escapeHtml(order.carrier) : 'Carrier';
+      const trackNum = order.carrierTracking ? escapeHtml(order.carrierTracking) : '';
+      shipLine = `<div class="result-note" style="border-color:var(--blue);background:#f0f7fc;">
+        <strong>${carrierName}</strong>${trackNum ? ': ' + trackNum : ''}
+      </div>`;
+    }
+
+    box.innerHTML = `
+      <div class="status-badge ${isReady ? 'done' : ''}">${escapeHtml(statusLabel(order.status))}</div>
+      <div class="result-meta">
+        Tracking: <strong>${escapeHtml(order.tracking)}</strong><br>
+        Last updated: ${fmtDate(order.updatedAt)}
+      </div>
+      ${order.note ? `<div class="result-note">${escapeHtml(order.note)}</div>` : ''}
+      ${shipLine}
+      <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#999;margin-bottom:10px;">Progress</div>
+      <ul class="timeline">${timeline}</ul>
+      <div class="order-summary">
+        <div><span>Customer</span><span>${escapeHtml(order.customer || '—')}</span></div>
+        <div><span>Item</span><span>${escapeHtml(order.description || '—')}</span></div>
+        <div><span>Size</span><span>${escapeHtml(order.size || '—')}</span></div>
+      </div>
+    `;
+    card.classList.add('show');
+  }
+
+  document.getElementById('btn-track').addEventListener('click', async () => {
+    const val = document.getElementById('track-input').value.trim().toUpperCase();
+    if (!val) { document.getElementById('track-input').focus(); return; }
+    if (!SCRIPT_URL) {
+      renderClientResult(null, 'Tracking API not configured. Set SCRIPT_URL in this file.');
+      return;
+    }
+    const btn = document.getElementById('btn-track');
+    btn.disabled = true;
+    btn.textContent = 'CHECKING…';
+    try {
+      const data = await api('track', { tracking: val });
+      if (data.ok && data.order) renderClientResult(data.order);
+      else renderClientResult(null, data.message || 'No order found.');
+    } catch (err) {
+      renderClientResult(null, 'Could not reach server. Check SCRIPT_URL and deployment.');
+    }
+    btn.disabled = false;
+    btn.textContent = 'CHECK STATUS';
+  });
+  document.getElementById('track-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-track').click();
+  });
+
+  // ---------- ADMIN ----------
+  document.getElementById('btn-admin-login').addEventListener('click', tryLogin);
+  document.getElementById('admin-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryLogin();
+  });
+
+  async function tryLogin() {
+    const key = document.getElementById('admin-pass').value.trim();
+    if (!key) { toast('Enter admin key'); return; }
+    if (!SCRIPT_URL) { toast('Set SCRIPT_URL first'); return; }
+    try {
+      const data = await api('list', { key });
+      if (!data.ok) {
+        toast(data.message || 'Invalid key');
+        return;
+      }
+      adminKey = key;
+      sessionStorage.setItem('kc_admin_key', key);
+      document.getElementById('admin-gate').style.display = 'none';
+      document.getElementById('admin-app').style.display = 'block';
+      ordersCache = data.orders || [];
+      renderOrderList();
+    } catch (err) {
+      toast('Connection failed');
+    }
+  }
+
+  if (adminKey && SCRIPT_URL) {
+    document.getElementById('admin-gate').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'block';
+    refreshOrders();
+  }
+  if (DEFAULT_ADMIN_KEY) {
+    document.getElementById('admin-pass').value = DEFAULT_ADMIN_KEY;
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    adminKey = '';
+    sessionStorage.removeItem('kc_admin_key');
+    document.getElementById('admin-app').style.display = 'none';
+    document.getElementById('admin-gate').style.display = 'block';
+    document.getElementById('admin-pass').value = '';
+    closeEditor();
+  });
+
+  async function refreshOrders() {
+    if (!adminKey || !SCRIPT_URL) return;
+    const box = document.getElementById('order-list');
+    box.innerHTML = '<div class="loading">Loading orders…</div>';
+    try {
+      const data = await api('list', { key: adminKey });
+      if (!data.ok) {
+        box.innerHTML = '<div class="empty-state">Failed to load. Check admin key.</div>';
+        return;
+      }
+      ordersCache = data.orders || [];
+      renderOrderList();
+    } catch {
+      box.innerHTML = '<div class="empty-state">Connection error.</div>';
+    }
+  }
+
+  function renderOrderList() {
+    const q = (document.getElementById('admin-search').value || '').trim().toUpperCase();
+    const filtered = q
+      ? ordersCache.filter(o =>
+          (o.tracking || '').toUpperCase().includes(q) ||
+          (o.customer || '').toUpperCase().includes(q) ||
+          (o.description || '').toUpperCase().includes(q))
+      : ordersCache;
+
+    const box = document.getElementById('order-list');
+    if (!filtered.length) {
+      box.innerHTML = `<div class="empty-state">${ordersCache.length ? 'No matches.' : 'No orders yet. Submit one from the order form.'}</div>`;
+      return;
+    }
+    box.innerHTML = filtered.map(o => `
+      <div class="order-item ${selectedTracking === o.tracking ? 'active' : ''}" data-t="${escapeHtml(o.tracking)}">
+        <div class="code">${escapeHtml(o.tracking)}</div>
+        <div class="meta">${escapeHtml(o.customer || '—')} · ${escapeHtml(o.description || '—')}</div>
+        <span class="status-tag">${escapeHtml(statusLabel(o.status))}</span>
+      </div>
+    `).join('');
+    box.querySelectorAll('.order-item').forEach(el => {
+      el.addEventListener('click', () => openEditor(el.dataset.t));
+    });
+  }
+
+  document.getElementById('btn-admin-search').addEventListener('click', () => renderOrderList());
+  document.getElementById('admin-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') renderOrderList();
+  });
+  document.getElementById('btn-refresh').addEventListener('click', () => {
+    refreshOrders();
+    toast('Refreshing…');
+  });
+
+  function openEditor(tracking) {
+    const order = ordersCache.find(o => o.tracking === tracking);
+    if (!order) return;
+    selectedTracking = tracking;
+    document.getElementById('ed-tracking').textContent = order.tracking;
+    document.getElementById('ed-meta').textContent =
+      `${order.customer || '—'} · ${order.description || '—'} · Size ${order.size || '—'}`;
+    document.getElementById('ed-note').value = order.note || '';
+
+    const opts = document.getElementById('status-options');
+    const isOtherCarrier = order.carrier && !KNOWN_CARRIERS.includes(order.carrier);
+
+    opts.innerHTML = STATUSES.map(s => `
+      <label class="status-option ${order.status === s.id ? 'selected' : ''}" data-id="${s.id}">
+        <input type="radio" name="status" value="${s.id}" ${order.status === s.id ? 'checked' : ''}/>
+        <div class="opt-body">
+          <div class="opt-label">${s.label}</div>
+          <div class="opt-desc">${s.desc}</div>
+          ${s.hasTracking ? `
+            <div class="ship-extra">
+              <div style="display:grid;gap:10px;">
+                <div>
+                  <label for="ed-carrier-name" style="font-size:11px;">Carrier</label>
+                  <select id="ed-carrier-name">
+                    <option value="">Select carrier…</option>
+                    ${KNOWN_CARRIERS.map(c => `<option value="${c}" ${order.carrier === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    <option value="Other" ${isOtherCarrier ? 'selected' : ''}>Other</option>
+                  </select>
+                </div>
+                <div id="ed-carrier-other-wrap" style="display:${isOtherCarrier ? 'block' : 'none'};">
+                  <label for="ed-carrier-other" style="font-size:11px;">Carrier name</label>
+                  <input type="text" id="ed-carrier-other" placeholder="Enter carrier name" value="${isOtherCarrier ? escapeHtml(order.carrier) : ''}"/>
+                </div>
+                <div>
+                  <label for="ed-carrier-tracking" style="font-size:11px;">Tracking number</label>
+                  <input type="text" id="ed-carrier-tracking" placeholder="e.g. 1Z999AA10123456784" value="${escapeHtml(order.carrierTracking || '')}"/>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </label>
+    `).join('');
+
+    opts.querySelectorAll('.status-option').forEach(lab => {
+      lab.addEventListener('click', () => {
+        opts.querySelectorAll('.status-option').forEach(l => l.classList.remove('selected'));
+        lab.classList.add('selected');
+        lab.querySelector('input').checked = true;
+      });
+    });
+
+    const carrierSelect = document.getElementById('ed-carrier-name');
+    if (carrierSelect) {
+      carrierSelect.addEventListener('change', () => {
+        const wrap = document.getElementById('ed-carrier-other-wrap');
+        if (wrap) wrap.style.display = carrierSelect.value === 'Other' ? 'block' : 'none';
+      });
+      const shipExtra = carrierSelect.closest('.ship-extra');
+      if (shipExtra) shipExtra.addEventListener('click', e => e.stopPropagation());
+    }
+
+    document.getElementById('editor').classList.add('show');
+    document.getElementById('editor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    renderOrderList();
+  }
+
+  function closeEditor() {
+    selectedTracking = null;
+    document.getElementById('editor').classList.remove('show');
+    renderOrderList();
+  }
+  document.getElementById('btn-ed-cancel').addEventListener('click', closeEditor);
+
+  document.getElementById('btn-ed-save').addEventListener('click', async () => {
+    if (!selectedTracking) return;
+    const radio = document.querySelector('input[name="status"]:checked');
+    if (!radio) { toast('Select a status'); return; }
+
+    let carrier = '';
+    let carrierTracking = '';
+    const carrierSelect = document.getElementById('ed-carrier-name');
+    const carrierTrackEl = document.getElementById('ed-carrier-tracking');
+    if (carrierSelect) {
+      if (carrierSelect.value === 'Other') {
+        const otherEl = document.getElementById('ed-carrier-other');
+        carrier = otherEl ? otherEl.value.trim() : '';
+      } else {
+        carrier = carrierSelect.value;
+      }
+    }
+    if (carrierTrackEl) carrierTracking = carrierTrackEl.value.trim();
+
+    const payload = {
+      key: adminKey,
+      tracking: selectedTracking,
+      status: radio.value,
+      note: document.getElementById('ed-note').value.trim(),
+      carrier,
+      carrierTracking
+    };
+
+    const btn = document.getElementById('btn-ed-save');
+    btn.disabled = true;
+    btn.textContent = 'SAVING…';
+    try {
+      const data = await api('update', payload, 'POST');
+      if (!data.ok) {
+        toast(data.message || 'Update failed');
+      } else {
+        toast('Status updated');
+        closeEditor();
+        await refreshOrders();
+      }
+    } catch {
+      toast('Connection failed');
+    }
+    btn.disabled = false;
+    btn.textContent = 'SAVE UPDATE';
+  });
+
+  // ---------- Init banner ----------
+  if (!SCRIPT_URL) {
+    setBanner(false, '⚠️ Set <strong>SCRIPT_URL</strong> in this file to your Apps Script Web App URL to go live.');
+  } else {
+    api('ping', {}).then(d => {
+      if (d && d.ok) setBanner(true, '✅ Connected to KITCLOSET tracking API');
+      else setBanner(false, '⚠️ API responded but unexpected result. Check deployment.');
+    }).catch(() => {
+      setBanner(false, '⚠️ Cannot reach SCRIPT_URL. Redeploy Apps Script as Web App (Anyone).');
+    });
+  }
+})();
+</script>
+</body>
+</html>
